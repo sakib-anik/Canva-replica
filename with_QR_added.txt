@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voucher Template</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+        .voucher-container {
+            width: 400px;
+            height: 250px;
+            border: 2px solid #000;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            overflow: hidden;
+        }
+        .draggable-text, .draggable-qrcode {
+            position: absolute;
+            cursor: grab;
+            user-select: none;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .file-input, .text-input, .font-size-input, .toggle-container {
+            margin-top: 10px;
+        }
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background: #ccc;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .toggle-switch::before {
+            content: "";
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            top: 1px;
+            left: 1px;
+            transition: 0.3s;
+        }
+        .toggle-input:checked + .toggle-switch::before {
+            left: 21px;
+        }
+        .toggle-input:checked + .toggle-switch {
+            background: #4caf50;
+        }
+        .toggle-input {
+            display: none;
+        }
+        .size-input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .size-input {
+            width: 100px;
+            text-align: center;
+        }
+        .size-button {
+            background-color: #ccc;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .size-button:disabled {
+            background-color: #ddd;
+            cursor: not-allowed;
+        }
+        .text-control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="voucher-container" id="voucher">
+        <div class="draggable-text" id="draggableText">Your Text Here</div>
+        <div class="draggable-text" id="draggableText2" style="display: none;">Second Text</div>
+        <img src="" class="draggable-qrcode" id="qrCode" style="display: none; width: 50px; height: 50px;" alt="QR Code">
+    </div>
+    
+    <div class="controls">
+        <input type="file" class="file-input" id="fileInput" accept="image/*">
+        
+        <!-- First Text Input -->
+        <div class="text-control-group">
+            <div class="toggle-container">
+                <input type="checkbox" id="toggleText" class="toggle-input">
+                <label for="toggleText" class="toggle-switch"></label>
+                <span>Enable Text Input 1</span>
+            </div>
+            <input type="text" class="text-input" id="textInput" placeholder="Enter text here" disabled>
+            <input type="range" class="font-size-input" id="fontSizeInput" min="10" max="50" value="20" disabled>
+        </div>
+        
+        <!-- Second Text Input -->
+        <div class="text-control-group">
+            <div class="toggle-container">
+                <input type="checkbox" id="toggleText2" class="toggle-input">
+                <label for="toggleText2" class="toggle-switch"></label>
+                <span>Enable Text Input 2</span>
+            </div>
+            <input type="text" class="text-input" id="textInput2" placeholder="Enter second text here" disabled>
+            <input type="range" class="font-size-input" id="fontSizeInput2" min="10" max="50" value="20" disabled>
+        </div>
+        
+        <!-- QR Code Controls -->
+        <div class="toggle-container">
+            <input type="checkbox" id="toggleQRCode" class="toggle-input">
+            <label for="toggleQRCode" class="toggle-switch"></label>
+            <span>Enable QR Code</span>
+        </div>
+        <input type="file" class="file-input" id="qrCodeInput" accept="image/*" disabled>
+        
+        <!-- QR Code Size Controls -->
+        <div class="size-input-container">
+            <button class="size-button" id="decreaseSize">-</button>
+            <input type="text" id="qrCodeSize" class="size-input" readonly placeholder="QRCode Size: 50x50">
+            <button class="size-button" id="increaseSize">+</button>
+        </div>
+    </div>
+    
+    <script>
+        // Global variables to keep track of QR code size
+        let qrCodeWidth = 50;
+        let qrCodeHeight = 50;
+
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('voucher').style.backgroundImage = `url(${e.target.result})`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        const textElement = document.getElementById("draggableText");
+        const textElement2 = document.getElementById("draggableText2");
+        const qrCodeElement = document.getElementById("qrCode");
+        const qrCodeSizeInput = document.getElementById("qrCodeSize");
+        let isDraggingText = false, isDraggingText2 = false, isDraggingQRCode = false;
+        let offsetX, offsetY;
+
+        // First Text Element Dragging
+        textElement.addEventListener("mousedown", function(event) {
+            isDraggingText = true;
+            offsetX = event.clientX - textElement.getBoundingClientRect().left;
+            offsetY = event.clientY - textElement.getBoundingClientRect().top;
+            textElement.style.cursor = "grabbing";
+        });
+
+        // Second Text Element Dragging
+        textElement2.addEventListener("mousedown", function(event) {
+            isDraggingText2 = true;
+            offsetX = event.clientX - textElement2.getBoundingClientRect().left;
+            offsetY = event.clientY - textElement2.getBoundingClientRect().top;
+            textElement2.style.cursor = "grabbing";
+        });
+
+        document.addEventListener("mousemove", function(event) {
+            if (isDraggingText) {
+                let x = event.clientX - offsetX - document.getElementById("voucher").offsetLeft;
+                let y = event.clientY - offsetY - document.getElementById("voucher").offsetTop;
+                textElement.style.left = `${x}px`;
+                textElement.style.top = `${y}px`;
+            }
+
+            if (isDraggingText2) {
+                let x = event.clientX - offsetX - document.getElementById("voucher").offsetLeft;
+                let y = event.clientY - offsetY - document.getElementById("voucher").offsetTop;
+                textElement2.style.left = `${x}px`;
+                textElement2.style.top = `${y}px`;
+            }
+
+            if (isDraggingQRCode) {
+                let x = event.clientX - offsetX - document.getElementById("voucher").offsetLeft;
+                let y = event.clientY - offsetY - document.getElementById("voucher").offsetTop;
+                qrCodeElement.style.left = `${x}px`;
+                qrCodeElement.style.top = `${y}px`;
+            }
+        });
+
+        document.addEventListener("mouseup", function() {
+            isDraggingText = false;
+            isDraggingText2 = false;
+            isDraggingQRCode = false;
+            textElement.style.cursor = "grab";
+            textElement2.style.cursor = "grab";
+            qrCodeElement.style.cursor = "grab";
+        });
+
+        // Handle QRCode dragging
+        qrCodeElement.addEventListener("mousedown", function(event) {
+            isDraggingQRCode = true;
+            offsetX = event.clientX - qrCodeElement.getBoundingClientRect().left;
+            offsetY = event.clientY - qrCodeElement.getBoundingClientRect().top;
+            qrCodeElement.style.cursor = "grabbing";
+        });
+
+        // First Text Controls
+        document.getElementById("fontSizeInput").addEventListener("input", function(event) {
+            textElement.style.fontSize = `${event.target.value}px`;
+        });
+
+        document.getElementById("textInput").addEventListener("input", function(event) {
+            textElement.textContent = event.target.value;
+        });
+
+        document.getElementById("toggleText").addEventListener("change", function(event) {
+            const enabled = event.target.checked;
+            document.getElementById("textInput").disabled = !enabled;
+            document.getElementById("fontSizeInput").disabled = !enabled;
+            textElement.style.display = enabled ? "block" : "none";
+        });
+
+        // Second Text Controls
+        document.getElementById("fontSizeInput2").addEventListener("input", function(event) {
+            textElement2.style.fontSize = `${event.target.value}px`;
+        });
+
+        document.getElementById("textInput2").addEventListener("input", function(event) {
+            textElement2.textContent = event.target.value;
+        });
+
+        document.getElementById("toggleText2").addEventListener("change", function(event) {
+            const enabled = event.target.checked;
+            document.getElementById("textInput2").disabled = !enabled;
+            document.getElementById("fontSizeInput2").disabled = !enabled;
+            textElement2.style.display = enabled ? "block" : "none";
+        });
+
+        document.getElementById("toggleQRCode").addEventListener("change", function(event) {
+            const qrCodeInput = document.getElementById("qrCodeInput");
+            const qrCode = document.getElementById("qrCode");
+            qrCodeInput.disabled = !event.target.checked;
+
+            if (event.target.checked) {
+                qrCode.style.display = "block"; // Show QR code when checked
+            } else {
+                qrCode.style.display = "none"; // Hide QR code when unchecked
+            }
+        });
+
+        document.getElementById("qrCodeInput").addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const qrCode = document.getElementById("qrCode");
+                    qrCode.src = e.target.result;
+                    qrCode.style.display = "block"; // Ensure QR code is displayed after upload
+                    
+                    // Initialize QR Code Size
+                    qrCodeWidth = 50;
+                    qrCodeHeight = 50;
+                    qrCode.style.width = `${qrCodeWidth}px`;
+                    qrCode.style.height = `${qrCodeHeight}px`;
+
+                    // Update QRCode size display
+                    updateQRCodeSize();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function updateQRCodeSize() {
+            qrCodeSizeInput.value = `QRCode Size: ${qrCodeWidth}x${qrCodeHeight}`;
+        }
+
+        // Increase and Decrease size functionality
+        document.getElementById("increaseSize").addEventListener("click", function() {
+            qrCodeWidth += 10;
+            qrCodeHeight += 10;
+            qrCodeElement.style.width = `${qrCodeWidth}px`;
+            qrCodeElement.style.height = `${qrCodeHeight}px`;
+            updateQRCodeSize();
+        });
+
+        document.getElementById("decreaseSize").addEventListener("click", function() {
+            if (qrCodeWidth > 10 && qrCodeHeight > 10) { // Prevent size from going below 10px
+                qrCodeWidth -= 10;
+                qrCodeHeight -= 10;
+                qrCodeElement.style.width = `${qrCodeWidth}px`;
+                qrCodeElement.style.height = `${qrCodeHeight}px`;
+                updateQRCodeSize();
+            }
+        });
+    </script>
+</body>
+</html>

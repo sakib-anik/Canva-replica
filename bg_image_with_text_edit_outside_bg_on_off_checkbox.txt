@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voucher Template</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+        .voucher-container {
+            width: 400px;
+            height: 250px;
+            border: 2px solid #000;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            overflow: hidden;
+        }
+        .draggable-text {
+            position: absolute;
+            cursor: grab;
+            user-select: none;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .file-input, .text-input, .font-size-input, .toggle-input {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="voucher-container" id="voucher">
+        <div class="draggable-text" id="draggableText"></div>
+    </div>
+    
+    <div class="controls">
+        <input type="file" class="file-input" id="fileInput" accept="image/*">
+        <label>
+            <input type="checkbox" id="toggleText"> Enable Text Input
+        </label>
+        <input type="text" class="text-input" id="textInput" placeholder="Enter text here" disabled>
+        <input type="range" class="font-size-input" id="fontSizeInput" min="10" max="50" value="20" disabled>
+    </div>
+    
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('voucher').style.backgroundImage = `url(${e.target.result})`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        const textElement = document.getElementById("draggableText");
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        textElement.addEventListener("mousedown", function(event) {
+            isDragging = true;
+            offsetX = event.clientX - textElement.getBoundingClientRect().left;
+            offsetY = event.clientY - textElement.getBoundingClientRect().top;
+            textElement.style.cursor = "grabbing";
+        });
+
+        document.addEventListener("mousemove", function(event) {
+            if (isDragging) {
+                let x = event.clientX - offsetX - document.getElementById("voucher").offsetLeft;
+                let y = event.clientY - offsetY - document.getElementById("voucher").offsetTop;
+                textElement.style.left = `${x}px`;
+                textElement.style.top = `${y}px`;
+            }
+        });
+
+        document.addEventListener("mouseup", function() {
+            isDragging = false;
+            textElement.style.cursor = "grab";
+        });
+
+        document.getElementById("fontSizeInput").addEventListener("input", function(event) {
+            textElement.style.fontSize = `${event.target.value}px`;
+        });
+
+        document.getElementById("textInput").addEventListener("input", function(event) {
+            textElement.textContent = event.target.value;
+        });
+
+        document.getElementById("toggleText").addEventListener("change", function(event) {
+            const enabled = event.target.checked;
+            document.getElementById("textInput").disabled = !enabled;
+            document.getElementById("fontSizeInput").disabled = !enabled;
+            textElement.style.display = enabled ? "block" : "none";
+        });
+    </script>
+</body>
+</html>
